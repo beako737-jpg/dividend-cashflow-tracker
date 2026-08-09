@@ -1,0 +1,20 @@
+{
+  "as_of_year": 2026,
+  "sources": [
+    {
+      "broker": "SBI証券",
+      "csv": "sbi_dividends.csv"
+    },
+    {
+      "broker": "楽天証券",
+      "csv": "rakuten_dividends.csv",
+      "mapping": {
+        "date": "受取日",
+        "code": "コード",
+        "name": "ファンド名",
+        "account": "口座区分",
+        "amount": "受取金額(円)"
+      }
+    }
+  ]
+}
