@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>配当金・分配金 受取キャッシュフローレポート</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    background: var(--page-plane);
+  }
+  .viz-root {
+    color-scheme: light;
+    --page-plane:     #f9f9f7;
+    --surface-1:      #fcfcfb;
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted:     #898781;
+    --grid:           #e1e0d9;
+    --axis:           #c3c2b7;
+    --border:         rgba(11,11,11,0.10);
+    --chip-bg:        #f0efec;
+    --series-1:       #2a78d6;
+    --series-2:       #eb6834;
+    --series-3:       #1baf7a;
+    --series-4:       #eda100;
+    --series-unknown: #898781;
+    --status-good:    #0ca30c;
+    --status-warn:    #c98500;
+    --status-critical:#d03b3b;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 20px 40px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) .viz-root {
+      color-scheme: dark;
+      --page-plane:     #0d0d0d;
+      --surface-1:      #1a1a19;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --text-muted:     #898781;
+      --grid:           #2c2c2a;
+      --axis:           #383835;
+      --border:         rgba(255,255,255,0.10);
+      --chip-bg:        #262624;
+      --series-1:       #3987e5;
+      --series-2:       #d95926;
+      --series-3:       #199e70;
+      --series-4:       #c98500;
+      --series-unknown: #6f6e6a;
+      --status-good:    #0ca30c;
+      --status-warn:    #c98500;
+      --status-critical:#d03b3b;
+    }
+  }
+  :root[data-theme="dark"] .viz-root {
+    color-scheme: dark;
+    --page-plane:     #0d0d0d;
+    --surface-1:      #1a1a19;
+    --text-primary:   #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted:     #898781;
+    --grid:           #2c2c2a;
+    --axis:           #383835;
+    --border:         rgba(255,255,255,0.10);
+    --chip-bg:        #262624;
+    --series-1:       #3987e5;
+    --series-2:       #d95926;
+    --series-3:       #199e70;
+    --series-4:       #c98500;
+    --series-unknown: #6f6e6a;
+    --status-good:    #0ca30c;
+    --status-warn:    #c98500;
+    --status-critical:#d03b3b;
+  }
+  h1 { font-size: 18px; font-weight: 600; color: var(--text-primary); margin: 0 0 4px; }
+  h2 { font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0 0 10px; }
+  .subtitle { font-size: 13px; color: var(--text-secondary); margin: 0 0 20px; line-height: 1.6; }
+  .panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 16px 8px;
+    margin-bottom: 20px;
+  }
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .stat-card .label { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-card .value { font-size: 20px; font-weight: 600; color: var(--text-primary); font-variant-numeric: tabular-nums; }
+  .stat-card .value.good { color: var(--status-good); }
+  .stat-card .value.bad { color: var(--status-critical); }
+  .stat-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .axis-line { stroke: var(--axis); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 11px; }
+  .bar-nisa_growth, .bar-nisa_tsumitate, .bar-nisa_general { fill: var(--series-1); }
+  .bar-specific { fill: var(--series-2); }
+  .bar-general { fill: var(--series-4); }
+  .bar-unknown { fill: var(--series-unknown); }
+  .chart-wrap { position: relative; }
+  .tooltip {
+    position: absolute; pointer-events: none; z-index: 5;
+    background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; color: var(--text-primary); box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    min-width: 170px; display: none;
+  }
+  .tooltip .t-row { display: flex; justify-content: space-between; gap: 14px; margin-top: 2px; }
+  .tooltip .t-title { font-weight: 600; margin-bottom: 4px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin: 0 0 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; flex: none; }
+  .bar-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .bar-row { display: grid; grid-template-columns: 168px 1fr 190px; align-items: center; gap: 10px; padding: 4px 6px; border-radius: 8px; }
+  .bar-row:hover { background: var(--chip-bg); }
+  .bar-row-label { font-size: 12px; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bar-row-label .code { color: var(--text-muted); font-size: 11px; margin-left: 4px; }
+  .bar-row-track { background: var(--grid); border-radius: 6px; height: 14px; overflow: hidden; }
+  .bar-row-fill { height: 100%; border-radius: 6px; }
+  .bar-row-value { font-size: 12px; color: var(--text-secondary); text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .badge { display: inline-block; font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 999px; margin-left: 6px; }
+  .badge-tax-free { background: rgba(42,120,214,0.14); color: var(--series-1); }
+  .badge-taxable { background: rgba(235,104,52,0.16); color: var(--series-2); }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin: 4px 2px 8px; }
+  .toolbar button {
+    font: inherit; font-size: 13px; color: var(--text-secondary);
+    background: var(--chip-bg); border: none; border-radius: 8px;
+    padding: 6px 12px; cursor: pointer;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--grid); color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  th { color: var(--text-muted); font-weight: 500; position: sticky; top: 0; background: var(--surface-1); }
+  .table-scroll { max-height: 420px; overflow: auto; display: none; }
+  .table-scroll.always-visible { display: block; }
+  .note { font-size: 11px; color: var(--text-muted); margin-top: 14px; line-height: 1.6; }
+  .tax-note { font-size: 12px; color: var(--text-secondary); background: var(--chip-bg); border-radius: 8px; padding: 10px 12px; margin: 0 0 14px; line-height: 1.6; }
+  .empty { font-size: 13px; color: var(--text-muted); padding: 16px 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="viz-root">
+  <h1>配当金・分配金 受取キャッシュフローレポート</h1>
+  <p class="subtitle">
+    複数の証券会社の公式「配当金・分配金履歴」CSVを統合し、実際に受け取った配当金・分配金を月次・年次・銘柄別・口座区分別に集計したレポートです。stock-tax-summaryのような確定申告向けの損益通算とは異なり、あくまで資産形成の観点での受取キャッシュフローの実績を可視化するもので、投資助言や将来の配当予測は行っていません。
+  </p>
+
+  <div class="stat-grid" id="statGrid"></div>
+
+  <div class="tax-note">
+    NISA口座（成長投資枠・つみたて投資枠）で受け取った配当金・分配金は非課税、特定口座・一般口座分は既に約20.315%の税金が源泉徴収された後の金額（税引後）です。同じ「受取金額」でも課税の有無が異なるため、単純に額だけで比較すると実質的な手取り効率を見誤ることがあります。
+  </div>
+
+  <div class="panel">
+    <h2>月次 受取推移</h2>
+    <div class="legend" id="monthlyLegend"></div>
+    <div class="chart-wrap">
+      <svg id="monthlyChart" viewBox="0 0 1000 320" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="tooltip" id="monthlyTooltip"></div>
+    </div>
+    <p class="note" style="margin-top:0">配当・分配金が実際にあった月のみを表示しています（毎月発生するとは限らないため、受取のなかった月は表示していません）。</p>
+  </div>
+
+  <div class="panel">
+    <h2>年次 受取推移</h2>
+    <div class="legend" id="yearlyLegend"></div>
+    <div class="chart-wrap">
+      <svg id="yearlyChart" viewBox="0 0 1000 260" preserveAspectRatio="xMidYMid meet"></svg>
+      <div class="tooltip" id="yearlyTooltip"></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>銘柄別 受取ランキング</h2>
+    <div class="bar-list" id="securityList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>口座区分別 内訳</h2>
+    <div class="bar-list" id="accountList"></div>
+  </div>
+
+  <div class="panel">
+    <h2>年 × 口座区分 集計表</h2>
+    <div class="table-scroll always-visible" id="matrixScroll">
+      <table id="matrixTable">
+        <thead><tr id="matrixHeadRow"></tr></thead>
+        <tbody id="matrixBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>証券会社別サマリー</h2>
+    <div class="table-scroll always-visible" id="brokerScroll">
+      <table id="brokerTable">
+        <thead><tr><th>証券会社</th><th>対象期間</th><th>銘柄数</th><th>件数</th><th>受取合計</th></tr></thead>
+        <tbody id="brokerBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="toolbar">
+      <h2 style="margin:0">受取明細</h2>
+      <button id="toggleTable">明細を表示</button>
+    </div>
+    <div class="table-scroll" id="detailScroll">
+      <table id="detailTable">
+        <thead>
+          <tr><th>受取日</th><th>証券会社</th><th>銘柄</th><th>口座区分</th><th>金額</th></tr>
+        </thead>
+        <tbody id="detailTableBody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="emptyMsg" style="display:none">受取記録がありません。</div>
+  </div>
+
+  <p class="note">
+    このレポートはオフラインで開けます（外部通信なし。チャートも自前SVG、外部CDNに依存しません）。集計対象は各証券会社の公式CSVに実際に記載された受取実績のみで、今後の配当予測・増配シミュレーション・銘柄選定の助言は一切行っていません。「口座区分 不明」に分類された行がある場合は、CSVの列名・値の表記が本ツールの認識パターンと一致していない可能性があります（実行時のコンソール出力に警告が表示されます）。複数年のデータがある場合も、すべての年をそのまま表示しており、特定の年だけを取捨選択することはありません。
+  </p>
+</div>
+<script>
+const DATA = __DATA_JSON__;
+const t = DATA.totals;
+const monthly = DATA.monthly;
+const yearly = DATA.yearly;
+const securities = DATA.securities;
+const accountBreakdown = DATA.account_breakdown;
+const matrix = DATA.year_account_matrix;
+const brokersSummary = DATA.brokers_summary;
+const records = DATA.records;
+const accountMeta = DATA.account_type_meta;
+
+function fmtYen(v) { return Math.round(v).toLocaleString('ja-JP') + '円'; }
+function accColorVar(accountType) {
+  if (accountType === 'specific') return 'var(--series-2)';
+  if (accountType === 'general') return 'var(--series-4)';
+  if (accountType === 'unknown') return 'var(--series-unknown)';
+  return 'var(--series-1)'; // nisa_growth / nisa_tsumitate / nisa_general
+}
+
+// --- stat cards ---
+const yoyText = t.yoy_change_pct === null
+  ? `前年データなし`
+  : `前年(${t.prev_year}年)比 ${t.yoy_change_pct >= 0 ? '+' : ''}${t.yoy_change_pct}%`;
+const cards = [
+  { label: '受取総額（全期間）', value: fmtYen(t.grand_total), sub: `${t.date_range[0]} 〜 ${t.date_range[1]} ／ ${t.record_count}件` },
+  { label: `${DATA.as_of_year}年の受取総額`, value: fmtYen(t.as_of_year_total), sub: yoyText },
+  { label: 'NISA分（非課税）', value: fmtYen(t.nisa_total), sub: `全体の${t.nisa_pct}%` },
+  { label: '課税口座分（特定・一般、税引後）', value: fmtYen(t.taxable_total), sub: `全体の${t.taxable_pct}%` },
+  { label: '銘柄数', value: `${t.security_count}銘柄`, sub: `${t.broker_count}証券会社（${t.brokers.join(' / ')}）` },
+];
+const statGrid = document.getElementById('statGrid');
+cards.forEach(c => {
+  const div = document.createElement('div');
+  div.className = 'stat-card';
+  div.innerHTML = `<div class="label">${c.label}</div><div class="value">${c.value}</div><div class="sub">${c.sub}</div>`;
+  statGrid.appendChild(div);
+});
+
+// --- generic stacked bar + tooltip chart, used for both monthly and yearly panels ---
+const svgNS = 'http://www.w3.org/2000/svg';
+
+function renderStackedChart(svgId, tooltipId, legendId, data, xKey, xLabelFn, H) {
+  const svg = document.getElementById(svgId);
+  const tooltip = document.getElementById(tooltipId);
+  const W = 1000;
+  const PAD = { top: 16, right: 20, bottom: 30, left: 78 };
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+  if (legendId) {
+    const legendEl = document.getElementById(legendId);
+    const legendItems = [
+      { label: 'NISA分（非課税）', swatch: 'var(--series-1)' },
+      { label: '特定口座（税引後）', swatch: 'var(--series-2)' },
+      { label: '一般口座（税引後）', swatch: 'var(--series-4)' },
+    ];
+    legendItems.forEach(it => {
+      const div = document.createElement('div');
+      div.className = 'legend-item';
+      div.innerHTML = `<span class="legend-swatch" style="background:${it.swatch}"></span>${it.label}`;
+      legendEl.appendChild(div);
+    });
+  }
+
+  const n = data.length;
+  if (!n) {
+    const msg = document.createElementNS(svgNS, 'text');
+    msg.setAttribute('x', W / 2); msg.setAttribute('y', H / 2);
+    msg.setAttribute('text-anchor', 'middle'); msg.setAttribute('class', 'axis-label');
+    msg.textContent = 'データがありません';
+    svg.appendChild(msg);
+    return;
+  }
+
+  const groupW = plotW / n;
+  const barW = Math.min(46, groupW * 0.55);
+  const xCenter = i => PAD.left + groupW * (i + 0.5);
+  const hi = Math.max(...data.map(d => d.total)) * 1.15 || 1;
+  const yAt = v => PAD.top + plotH - (v / hi) * plotH;
+
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const v = (hi * i) / yTicks;
+    const y = yAt(v);
+    const gl = document.createElementNS(svgNS, 'line');
+    gl.setAttribute('x1', PAD.left); gl.setAttribute('x2', W - PAD.right);
+    gl.setAttribute('y1', y); gl.setAttribute('y2', y);
+    gl.setAttribute('class', 'grid-line');
+    svg.appendChild(gl);
+    const lbl = document.createElementNS(svgNS, 'text');
+    lbl.setAttribute('x', PAD.left - 8); lbl.setAttribute('y', y + 3);
+    lbl.setAttribute('text-anchor', 'end'); lbl.setAttribute('class', 'axis-label');
+    lbl.textContent = Math.round(v / 10000).toLocaleString('ja-JP') + '万';
+    svg.appendChild(lbl);
+  }
+
+  data.forEach((d, i) => {
+    const x = xCenter(i);
+    const lbl = document.createElementNS(svgNS, 'text');
+    lbl.setAttribute('x', x); lbl.setAttribute('y', H - PAD.bottom + 18);
+    lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('class', 'axis-label');
+    lbl.textContent = xLabelFn(d);
+    svg.appendChild(lbl);
+  });
+  const baseAxis = document.createElementNS(svgNS, 'line');
+  baseAxis.setAttribute('x1', PAD.left); baseAxis.setAttribute('x2', W - PAD.right);
+  baseAxis.setAttribute('y1', yAt(0)); baseAxis.setAttribute('y2', yAt(0));
+  baseAxis.setAttribute('class', 'axis-line');
+  svg.appendChild(baseAxis);
+
+  data.forEach((d, i) => {
+    const x = xCenter(i);
+    const y0 = yAt(0);
+    let cum = 0;
+    [['nisa_total', 'nisa_growth'], ['taxable_total', 'specific'], ['unknown_total', 'unknown']].forEach(([field, colorKey]) => {
+      const v = d[field];
+      if (!v) return;
+      const yTop = yAt(cum + v);
+      const yBottom = yAt(cum);
+      const rect = document.createElementNS(svgNS, 'rect');
+      rect.setAttribute('x', x - barW / 2); rect.setAttribute('y', yTop);
+      rect.setAttribute('width', barW); rect.setAttribute('height', Math.max(0, yBottom - yTop));
+      rect.setAttribute('fill', accColorVar(colorKey));
+      svg.appendChild(rect);
+      cum += v;
+    });
+  });
+
+  const overlay = document.createElementNS(svgNS, 'rect');
+  overlay.setAttribute('x', PAD.left); overlay.setAttribute('y', PAD.top);
+  overlay.setAttribute('width', plotW); overlay.setAttribute('height', plotH);
+  overlay.setAttribute('fill', 'transparent');
+  const crosshair = document.createElementNS(svgNS, 'line');
+  crosshair.setAttribute('y1', PAD.top); crosshair.setAttribute('y2', H - PAD.bottom);
+  crosshair.setAttribute('class', 'grid-line');
+  crosshair.style.display = 'none';
+  svg.appendChild(crosshair);
+  svg.appendChild(overlay);
+
+  overlay.addEventListener('mousemove', (ev) => {
+    const rect = svg.getBoundingClientRect();
+    const scale = W / rect.width;
+    const mx = (ev.clientX - rect.left) * scale;
+    let i = Math.floor((mx - PAD.left) / groupW);
+    i = Math.max(0, Math.min(n - 1, i));
+    const x = xCenter(i);
+    crosshair.setAttribute('x1', x); crosshair.setAttribute('x2', x);
+    crosshair.style.display = '';
+    const d = data[i];
+    tooltip.innerHTML = `<div class="t-title">${xLabelFn(d)}</div>
+      <div class="t-row"><span>NISA分</span><span>${fmtYen(d.nisa_total)}</span></div>
+      <div class="t-row"><span>特定・一般口座</span><span>${fmtYen(d.taxable_total + d.unknown_total)}</span></div>
+      <div class="t-row"><span>合計</span><span>${fmtYen(d.total)}</span></div>`;
+    tooltip.style.display = 'block';
+    const wrapRect = overlay.ownerSVGElement.parentElement.getBoundingClientRect();
+    let left = ev.clientX - wrapRect.left + 14;
+    let top = ev.clientY - wrapRect.top + 14;
+    if (left + 190 > wrapRect.width) left = ev.clientX - wrapRect.left - 204;
+    tooltip.style.left = left + 'px';
+    tooltip.style.top = top + 'px';
+  });
+  overlay.addEventListener('mouseleave', () => {
+    tooltip.style.display = 'none';
+    crosshair.style.display = 'none';
+  });
+}
+
+renderStackedChart('monthlyChart', 'monthlyTooltip', 'monthlyLegend', monthly, 'month', d => d.month, 320);
+renderStackedChart('yearlyChart', 'yearlyTooltip', null, yearly, 'year', d => d.year + '年', 260);
+
+// --- security ranking (bar list) ---
+const securityList = document.getElementById('securityList');
+const maxSecTotal = Math.max(1, ...securities.map(s => s.total));
+securities.forEach(s => {
+  const pctWidth = Math.max(2, (s.total / maxSecTotal) * 100);
+  const row = document.createElement('div');
+  row.className = 'bar-row';
+  row.innerHTML = `<div class="bar-row-label">${s.name}${s.code ? `<span class="code">${s.code}</span>` : ''}</div>
+    <div class="bar-row-track"><div class="bar-row-fill" style="width:${pctWidth}%;background:var(--series-1)"></div></div>
+    <div class="bar-row-value">${fmtYen(s.total)}（${s.pct}%）</div>`;
+  securityList.appendChild(row);
+});
+
+// --- account-type breakdown (bar list) ---
+const accountList = document.getElementById('accountList');
+const maxAccTotal = Math.max(1, ...accountBreakdown.map(a => a.total));
+accountBreakdown.forEach(a => {
+  const pctWidth = Math.max(2, (a.total / maxAccTotal) * 100);
+  const badge = a.taxable === false ? '<span class="badge badge-tax-free">非課税</span>'
+    : a.taxable === true ? '<span class="badge badge-taxable">課税(税引後)</span>' : '';
+  const row = document.createElement('div');
+  row.className = 'bar-row';
+  row.innerHTML = `<div class="bar-row-label">${a.label}${badge}</div>
+    <div class="bar-row-track"><div class="bar-row-fill" style="width:${pctWidth}%;background:${accColorVar(a.account_type)}"></div></div>
+    <div class="bar-row-value">${fmtYen(a.total)}（${a.pct}%・${a.record_count}件）</div>`;
+  accountList.appendChild(row);
+});
+
+// --- year x account-type matrix table ---
+const headRow = document.getElementById('matrixHeadRow');
+const accLabels = matrix.account_types.map(k => accountMeta[k].label);
+const headCells = ['年', ...accLabels, '合計'];
+headRow.innerHTML = headCells.map(h => `<th>${h}</th>`).join('');
+const matrixBody = document.getElementById('matrixBody');
+matrixBody.innerHTML = matrix.years.map((y, i) => {
+  const rowValues = matrix.values[i];
+  const total = rowValues.reduce((a, b) => a + b, 0);
+  const cells = rowValues.map(v => `<td>${v ? fmtYen(v) : '-'}</td>`).join('');
+  return `<tr><td>${y}年</td>${cells}<td>${fmtYen(total)}</td></tr>`;
+}).join('');
+
+// --- broker summary table ---
+const brokerBody = document.getElementById('brokerBody');
+brokerBody.innerHTML = brokersSummary.map(b => `<tr>
+    <td>${b.broker}</td>
+    <td>${b.date_range[0]} 〜 ${b.date_range[1]}</td>
+    <td>${b.security_count}銘柄</td>
+    <td>${b.record_count}件</td>
+    <td>${fmtYen(b.total)}</td>
+  </tr>`).join('');
+
+// --- detail table ---
+const tbody = document.getElementById('detailTableBody');
+const emptyMsg = document.getElementById('emptyMsg');
+if (!records.length) {
+  emptyMsg.style.display = 'block';
+} else {
+  tbody.innerHTML = records.slice().reverse().map(r => `<tr>
+      <td>${r.date}</td>
+      <td>${r.broker}</td>
+      <td>${r.name}${r.code ? `<span class="code" style="color:var(--text-muted);font-size:11px;margin-left:4px;">${r.code}</span>` : ''}</td>
+      <td>${r.account_label}</td>
+      <td>${fmtYen(r.amount)}</td>
+    </tr>`).join('');
+}
+
+const toggleBtn = document.getElementById('toggleTable');
+const detailScroll = document.getElementById('detailScroll');
+let tableShown = false;
+toggleBtn.addEventListener('click', () => {
+  tableShown = !tableShown;
+  detailScroll.style.display = tableShown ? 'block' : 'none';
+  toggleBtn.textContent = tableShown ? '明細を隠す' : '明細を表示';
+});
+</script>
+</body>
+</html>
